@@ -22,7 +22,7 @@ const path    = require('path');
 const healthRouter   = require('./routes/health');
 const uploadRouter   = require('./routes/upload');
 const statsRouter    = require('./routes/stats');
-const redirectRouter = require('./routes/redirect');
+const viewRouter     = require('./routes/view');
 
 const app  = express();
 const PORT = process.env.PORT || 4000;
@@ -56,7 +56,7 @@ app.use(express.json());
 app.use('/api/health', healthRouter);
 app.use('/api/upload', uploadRouter);
 app.use('/api/stats',  statsRouter);
-app.use('/i',          redirectRouter);  // short-code redirect: GET /i/:code
+app.use('/api/view',   viewRouter);
 
 // ── Global error handler ──────────────────────────────────────────────────────
 // Catches any error passed via next(err) in route handlers.

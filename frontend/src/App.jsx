@@ -22,6 +22,7 @@ import ResultCard     from './components/ResultCard';
 import RecentUploads  from './components/RecentUploads';
 import ThemeToggle    from './components/ThemeToggle';
 import { useToast }   from './components/Toast';
+import ViewPage       from './components/ViewPage';
 
 import { addRecent, getRecent, clearRecent } from './utils/storage';
 
@@ -87,20 +88,34 @@ export default function App() {
     setRecentList([]);
   }, []);
 
+  // Simple client-side routing
+  const path = window.location.pathname;
+  const isViewPage = path.startsWith('/i/');
+  const viewCode = isViewPage ? path.split('/')[2] : null;
+
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
     <div className="app">
-      {/* Header */}
+      {/* Unified Header */}
       <header className="app-header" role="banner">
-        <span className="app-logo">
+        <a href="/" className="app-logo">
           Pix<span>Link</span>
-        </span>
-        <ThemeToggle />
+        </a>
+        <div className="header-actions">
+          {isViewPage && (
+            <a href="/" className="button button-outline new-upload-btn">
+              New Upload
+            </a>
+          )}
+          <ThemeToggle />
+        </div>
       </header>
 
       {/* Main work area */}
       <main className="app-main" id="main-content" role="main">
-        {result ? (
+        {isViewPage ? (
+          <ViewPage code={viewCode} />
+        ) : result ? (
           /* ── Success: result card ─────────────────────────────────── */
           <ResultCard result={result} onReset={handleReset} />
         ) : (
@@ -123,11 +138,13 @@ export default function App() {
           </>
         )}
 
-        {/* Recent uploads — always visible below the work area */}
-        <RecentUploads
-          uploads={recentList}
-          onClear={handleClearRecent}
-        />
+        {/* Recent uploads — only show on homepage */}
+        {!isViewPage && (
+          <RecentUploads
+            uploads={recentList}
+            onClear={handleClearRecent}
+          />
+        )}
       </main>
 
       {/* Toast notifications */}
