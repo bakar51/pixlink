@@ -53,6 +53,7 @@ async function putItem(item) {
     TableName: TABLE,
     Item: {
       ...item,
+      shortCode: item.code, // Map internal 'code' to DynamoDB partition key 'shortCode'
       views: 0, // initialise view counter
     },
   });
@@ -74,7 +75,7 @@ async function getItem(code) {
 
   const command = new GetCommand({
     TableName: TABLE,
-    Key: { code },
+    Key: { shortCode: code },
   });
   const result = await docClient.send(command);
   return result.Item || null;
@@ -94,7 +95,7 @@ async function incrementViews(code) {
 
   const command = new UpdateCommand({
     TableName:        TABLE,
-    Key:              { code },
+    Key:              { shortCode: code },
     UpdateExpression: 'ADD #v :inc',
     ExpressionAttributeNames:  { '#v': 'views' },
     ExpressionAttributeValues: { ':inc': 1 },
