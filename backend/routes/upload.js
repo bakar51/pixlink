@@ -137,7 +137,7 @@ router.post(
         shortUrl,
         viewUrl,
         originalName,
-        size:       req.file.size,
+        size:       file.size,
         uploadedAt,
         expiresAt,
       });
