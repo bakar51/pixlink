@@ -1,0 +1,24 @@
+{
+  "name": "pixlink-frontend",
+  "version": "1.0.0",
+  "description": "PixLink React frontend — image upload, short URL, QR code",
+  "private": true,
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "browser-image-compression": "^2.0.2",
+    "qrcode": "^1.5.4",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^6.0.3",
+    "vite": "^8.1.4"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
