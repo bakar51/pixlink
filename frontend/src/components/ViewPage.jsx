@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { apiUrl } from '../utils/api';
 
 export default function ViewPage({ code }) {
   const [data, setData] = useState(null);
@@ -8,7 +9,7 @@ export default function ViewPage({ code }) {
   useEffect(() => {
     async function fetchImage() {
       try {
-        const res = await fetch(`/api/view/${code}`);
+        const res = await fetch(apiUrl(`/view/${code}`));
         if (res.status === 404) {
           setError('not_found');
         } else if (res.status === 410) {

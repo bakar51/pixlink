@@ -38,11 +38,21 @@ app.use(
 
 // ── CORS ─────────────────────────────────────────────────────────────────────
 // In development the frontend runs on localhost:5173 (Vite dev server).
-// In production set ALLOWED_ORIGIN to the real domain.
-const allowedOrigin = process.env.ALLOWED_ORIGIN || 'http://localhost:5173';
+// In production set ALLOWED_ORIGIN to the EC2 IP (http://13.60.220.175).
+// Multiple origins are supported via comma-separated values in ALLOWED_ORIGIN.
+const rawOrigin = process.env.ALLOWED_ORIGIN || 'http://localhost:5173';
+const allowedOrigins = rawOrigin.split(',').map(o => o.trim());
+
 app.use(
   cors({
-    origin: allowedOrigin,
+    origin: (origin, callback) => {
+      // Allow requests with no origin (curl, Postman, mobile apps)
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+      callback(new Error(`CORS blocked: ${origin}`));
+    },
     methods: ['GET', 'POST'],
   })
 );

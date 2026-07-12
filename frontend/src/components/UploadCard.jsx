@@ -14,6 +14,7 @@
  */
 
 import { useState, useRef } from 'react';
+import { apiUrl } from '../utils/api';
 
 export default function UploadCard({ file, onSuccess, onError }) {
   const [expiry,    setExpiry]    = useState('never');
@@ -74,7 +75,7 @@ export default function UploadCard({ file, onSuccess, onError }) {
       setProgress(0);
     };
 
-    xhr.open('POST', '/api/upload');
+    xhr.open('POST', apiUrl('/upload'));
     setUploading(true);
     setProgress(0);
     xhr.send(formData);
