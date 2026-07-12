@@ -1,20 +1,33 @@
 import { useState, useEffect } from 'react';
-import { apiFetch } from '../utils/api';
+import { apiUrl } from '../utils/api';
 import { formatBytes } from '../utils/compress';
+import { useAuth } from '../context/AuthContext';
 
 export default function Gallery() {
   const [uploads, setUploads] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const { user } = useAuth();
 
   useEffect(() => {
-    fetchUploads();
-  }, []);
+    if (user) {
+      fetchUploads();
+    }
+  }, [user]);
 
   const fetchUploads = async () => {
     try {
       setLoading(true);
-      const data = await apiFetch('/user/uploads');
+      const token = await user.getIdToken();
+      const res = await fetch(apiUrl('/user/uploads'), {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      if (!res.ok) {
+        throw new Error('Failed to fetch uploads');
+      }
+      const data = await res.json();
       setUploads(data);
     } catch (err) {
       setError('Failed to load your uploads. ' + err.message);

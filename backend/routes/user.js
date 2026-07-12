@@ -10,7 +10,7 @@ const router = Router();
 
 const dbClient = new DynamoDBClient({ region: process.env.AWS_REGION });
 const docClient = DynamoDBDocumentClient.from(dbClient);
-const TABLE = process.env.DYNAMODB_TABLE_NAME || 'pixlink-images';
+const TABLE = process.env.DYNAMODB_TABLE || 'pixlink-metadata';
 
 // GET /api/user/uploads
 router.get('/uploads', requireAuth, async (req, res, next) => {

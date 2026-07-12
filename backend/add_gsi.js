@@ -2,7 +2,7 @@ require('dotenv').config();
 const { DynamoDBClient, UpdateTableCommand } = require('@aws-sdk/client-dynamodb');
 
 const client = new DynamoDBClient({ region: process.env.AWS_REGION });
-const TABLE_NAME = process.env.DYNAMODB_TABLE_NAME || 'pixlink-images';
+const TABLE_NAME = process.env.DYNAMODB_TABLE || 'pixlink-metadata';
 
 async function addGSI() {
   const params = {
