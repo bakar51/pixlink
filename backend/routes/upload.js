@@ -30,35 +30,28 @@ const path       = require('path');
 
 const { uploadLimiter }                    = require('../middleware/rateLimit');
 const { multerFileFilter, validateFileSize } = require('../middleware/validate');
+const { optionalAuth }                     = require('../middleware/auth');
 const { uploadToS3, getPublicUrl }         = require('../services/s3');
 const { putItem }                          = require('../services/dynamo');
 const { generateCode }                     = require('../utils/shortCode');
 
 const router = Router();
 
-// Multer config — store uploads in memory (Buffer), not on disk.
-// limits.fileSize is the first line of defence against oversized uploads;
-// it aborts the stream early so we never buffer a huge file.
+// Multer config — store uploads in memory
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits:  { fileSize: 11 * 1024 * 1024 }, // 11 MB: slightly above our 10 MB limit
+  limits:  { fileSize: 11 * 1024 * 1024 }, // 11 MB
   fileFilter: multerFileFilter,
 });
 
 /**
  * computeExpiresAt(expiry)
- *
- * Converts the user's expiry choice into an ISO-8601 timestamp string,
- * or "never" if no expiry was chosen.
- *
- * @param {string} expiry - "never" | "1d" | "7d" | "30d"
- * @returns {string}
  */
 function computeExpiresAt(expiry) {
   const daysMap = { '1d': 1, '7d': 7, '30d': 30 };
   const days    = daysMap[expiry];
 
-  if (!days) return 'never'; // covers "never" and any unknown value
+  if (!days) return 'never';
 
   const d = new Date();
   d.setDate(d.getDate() + days);
@@ -68,35 +61,44 @@ function computeExpiresAt(expiry) {
 // POST /api/upload
 router.post(
   '/',
-  uploadLimiter,                  // rate limiting
-  upload.single('file'),          // multer — parses 'file' field
+  uploadLimiter,
+  optionalAuth,
+  upload.fields([{ name: 'file', maxCount: 1 }, { name: 'thumbnail', maxCount: 1 }]),
   async (req, res, next) => {
     try {
-      // multer puts the file at req.file; if missing, the field was absent
-      if (!req.file) {
+      // With upload.fields, files are in req.files object
+      const files = req.files || {};
+      const file = files['file'] ? files['file'][0] : null;
+      const thumbnail = files['thumbnail'] ? files['thumbnail'][0] : null;
+
+      if (!file) {
         return res.status(400).json({ error: 'No file provided.' });
       }
 
-      // Secondary size check (multer.memoryStorage already buffered the file)
-      const sizeError = validateFileSize(req.file);
+      // Secondary size check
+      const sizeError = validateFileSize(file);
       if (sizeError) {
         return res.status(sizeError.status).json({ error: sizeError.message });
       }
 
-      // Parse and validate expiry option (default to "never")
       const allowedExpiry = new Set(['never', '1d', '7d', '30d']);
       const expiry = allowedExpiry.has(req.body.expiry) ? req.body.expiry : 'never';
 
-      // Derive a clean file extension from the original name
-      const originalName = req.file.originalname || 'upload';
+      const originalName = file.originalname || 'upload';
       const ext          = path.extname(originalName).toLowerCase() || '.jpg';
 
-      // Generate a unique short code and build the S3 key
       const code  = await generateCode();
       const s3Key = `uploads/${code}${ext}`;
-
-      // Upload the file buffer to S3
-      await uploadToS3(s3Key, req.file.buffer, req.file.mimetype);
+      
+      // Upload main file
+      await uploadToS3(s3Key, file.buffer, file.mimetype);
+      
+      // Upload thumbnail if provided
+      let thumbS3Key = null;
+      if (thumbnail) {
+        thumbS3Key = `uploads/thumbs/${code}.webp`;
+        await uploadToS3(thumbS3Key, thumbnail.buffer, thumbnail.mimetype);
+      }
 
       const uploadedAt = new Date().toISOString();
       const expiresAt  = computeExpiresAt(expiry);
@@ -104,10 +106,12 @@ router.post(
       // Write metadata record to DynamoDB
       await putItem({
         code,
+        userId: req.userId || null,
         s3Key,
+        thumbS3Key,
         originalName,
-        mimeType:   req.file.mimetype,
-        size:       req.file.size,
+        mimeType:   file.mimetype,
+        size:       file.size,
         uploadedAt,
         expiresAt,
       });

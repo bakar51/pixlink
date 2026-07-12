@@ -15,26 +15,36 @@
 
 import { useState, useRef } from 'react';
 import { apiUrl } from '../utils/api';
+import { useAuth } from '../context/AuthContext';
+import { generateThumbnail } from '../utils/thumbnail';
 
 export default function UploadCard({ file, onSuccess, onError }) {
   const [expiry,    setExpiry]    = useState('never');
   const [uploading, setUploading] = useState(false);
   const [progress,  setProgress]  = useState(0);  // 0–100
   const xhrRef = useRef(null);
+  const { user } = useAuth();
 
-  const handleUpload = () => {
+  const handleUpload = async () => {
     if (!file || uploading) return;
+
+    setUploading(true);
+    setProgress(0);
 
     const formData = new FormData();
     formData.append('file',   file);
     formData.append('expiry', expiry);
 
+    // Generate thumbnail (fails silently if not an image)
+    const thumbnail = await generateThumbnail(file);
+    if (thumbnail) {
+      formData.append('thumbnail', thumbnail);
+    }
+
     const xhr = new XMLHttpRequest();
     xhrRef.current = xhr;
 
     // ── Real upload progress ──────────────────────────────────────────────
-    // xhr.upload.onprogress fires with loaded/total as bytes transferred,
-    // giving us a genuine percentage rather than a fake animation.
     xhr.upload.onprogress = (event) => {
       if (event.lengthComputable) {
         setProgress(Math.round((event.loaded / event.total) * 100));
@@ -76,8 +86,17 @@ export default function UploadCard({ file, onSuccess, onError }) {
     };
 
     xhr.open('POST', apiUrl('/upload'));
-    setUploading(true);
-    setProgress(0);
+    
+    // Attach auth token if logged in
+    if (user) {
+      try {
+        const token = await user.getIdToken();
+        xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+      } catch (err) {
+        console.warn('Could not get auth token', err);
+      }
+    }
+
     xhr.send(formData);
   };
 

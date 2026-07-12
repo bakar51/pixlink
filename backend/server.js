@@ -23,6 +23,7 @@ const healthRouter   = require('./routes/health');
 const uploadRouter   = require('./routes/upload');
 const statsRouter    = require('./routes/stats');
 const viewRouter     = require('./routes/view');
+const userRouter     = require('./routes/user');
 
 const app  = express();
 const PORT = process.env.PORT || 4000;
@@ -67,6 +68,7 @@ app.use('/api/health', healthRouter);
 app.use('/api/upload', uploadRouter);
 app.use('/api/stats',  statsRouter);
 app.use('/api/view',   viewRouter);
+app.use('/api/user',   userRouter);
 
 // ── Global error handler ──────────────────────────────────────────────────────
 // Catches any error passed via next(err) in route handlers.

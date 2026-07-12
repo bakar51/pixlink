@@ -26,6 +26,7 @@ import { useToast }   from './components/Toast';
 import ViewPage       from './components/ViewPage';
 import LoginPage      from './components/LoginPage';
 import { useAuth }    from './context/AuthContext';
+import Gallery        from './components/Gallery';
 
 import { addRecent, getRecent, clearRecent } from './utils/storage';
 
@@ -172,10 +173,7 @@ export default function App() {
         )}
 
         {!isViewPage && (
-          <RecentUploads
-            uploads={recentList}
-            onClear={handleClearRecent}
-          />
+          <Gallery />
         )}
       </main>
 
