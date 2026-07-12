@@ -80,5 +80,5 @@ app.use((err, req, res, next) => {
 // ── Start server ──────────────────────────────────────────────────────────────
 app.listen(PORT, () => {
   console.log(`[PixLink API] Listening on port ${PORT}`);
-  console.log(`[PixLink API] CORS origin: ${allowedOrigin}`);
+  console.log(`[PixLink API] CORS origin: ${allowedOrigins.join(', ')}`);
 });
