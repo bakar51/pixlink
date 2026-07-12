@@ -7,11 +7,12 @@
  *                ↑                                              |
  *                └──────────────── (reset) ───────────────────┘
  *
- * The single "work area" below the header transitions smoothly between:
- *  - idle/ready:  Dropzone + upload controls
- *  - success:     ResultCard (morphs in via CSS animation)
+ * Auth guard:
+ *   loading → spinner
+ *   !user   → <LoginPage />
+ *   user    → full app
  *
- * Recent uploads are maintained in localStorage and shown below the work area.
+ * IMPORTANT: ALL hooks must be declared before any early returns (React rule).
  */
 
 import { useState, useCallback } from 'react';
@@ -29,43 +30,21 @@ import { useAuth }    from './context/AuthContext';
 import { addRecent, getRecent, clearRecent } from './utils/storage';
 
 export default function App() {
+  // ── ALL hooks FIRST — no early returns before this block ───────────────────
   const { user, loading, signOut } = useAuth();
 
-  // Selected (compressed) file + its compression stats
-  const [file,         setFile]         = useState(null);
-  const [compResult,   setCompResult]   = useState(null);
-
-  // Upload result from API
-  const [result,       setResult]       = useState(null);
-
-  // recent uploads list (from localStorage)
-  const [recentList,   setRecentList]   = useState(() => getRecent());
+  const [file,       setFile]       = useState(null);
+  const [compResult, setCompResult] = useState(null);
+  const [result,     setResult]     = useState(null);
+  const [recentList, setRecentList] = useState(() => getRecent());
 
   const { showToast, ToastContainer } = useToast();
-
-  // ── Auth guards ────────────────────────────────────────────────────────────
-
-  // While Firebase resolves the initial session, show a minimal spinner
-  if (loading) {
-    return (
-      <div className="auth-loading" role="status" aria-label="Loading">
-        <span className="auth-spinner" />
-      </div>
-    );
-  }
-
-  // Not logged in — show the login page
-  if (!user) {
-    return <LoginPage />;
-  }
-
-  // ── Callbacks ──────────────────────────────────────────────────────────────
 
   /** Called by Dropzone when a valid, compressed file is ready */
   const handleFileReady = useCallback((compressedFile, compressionResult) => {
     setFile(compressedFile);
     setCompResult(compressionResult);
-    setResult(null); // clear any previous result
+    setResult(null);
   }, []);
 
   /** Called by Dropzone on validation failure */
@@ -76,8 +55,6 @@ export default function App() {
   /** Called by UploadCard on successful upload */
   const handleSuccess = useCallback((data) => {
     setResult(data);
-
-    // Persist to localStorage recent list
     addRecent({
       code:         data.code,
       shortUrl:     data.shortUrl,
@@ -95,7 +72,7 @@ export default function App() {
     showToast(message, 'error');
   }, [showToast]);
 
-  /** Resets back to the idle state */
+  /** Resets back to idle state */
   const handleReset = useCallback(() => {
     setFile(null);
     setCompResult(null);
@@ -108,15 +85,31 @@ export default function App() {
     setRecentList([]);
   }, []);
 
-  // Simple client-side routing
-  const path = window.location.pathname;
+  // ── Auth guards (AFTER all hooks) ──────────────────────────────────────────
+
+  // Firebase resolving initial session → show spinner
+  if (loading) {
+    return (
+      <div className="auth-loading" role="status" aria-label="Loading">
+        <span className="auth-spinner" />
+      </div>
+    );
+  }
+
+  // Not logged in → show login page
+  if (!user) {
+    return <LoginPage />;
+  }
+
+  // ── Routing ────────────────────────────────────────────────────────────────
+  const path       = window.location.pathname;
   const isViewPage = path.startsWith('/i/');
-  const viewCode = isViewPage ? path.split('/')[2] : null;
+  const viewCode   = isViewPage ? path.split('/')[2] : null;
 
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
     <div className="app">
-      {/* Unified Header */}
+      {/* Header */}
       <header className="app-header" role="banner">
         <a href="/" className="app-logo">
           Pix<span>Link</span>
@@ -160,18 +153,14 @@ export default function App() {
         {isViewPage ? (
           <ViewPage code={viewCode} />
         ) : result ? (
-          /* ── Success: result card ─────────────────────────────────── */
           <ResultCard result={result} onReset={handleReset} />
         ) : (
-          /* ── Idle / Ready: dropzone + upload controls ─────────────── */
           <>
             <Dropzone
               onFileReady={handleFileReady}
               onError={handleError}
               disabled={false}
             />
-
-            {/* Upload controls appear once a file is chosen */}
             {file && (
               <UploadCard
                 file={file}
@@ -182,7 +171,6 @@ export default function App() {
           </>
         )}
 
-        {/* Recent uploads — only show on homepage */}
         {!isViewPage && (
           <RecentUploads
             uploads={recentList}
@@ -191,7 +179,6 @@ export default function App() {
         )}
       </main>
 
-      {/* Toast notifications */}
       <ToastContainer />
     </div>
   );
