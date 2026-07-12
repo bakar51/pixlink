@@ -1,47 +1,38 @@
 /**
  * services/dynamo.js — DynamoDB helpers (SDK v3)
  *
+ * Authentication strategy:
+ *   Uses the AWS SDK v3 default credential provider chain.
+ *   On EC2 with an IAM Role: credentials are resolved automatically via IMDS.
+ *   No credentials are ever hardcoded.
+ *
  * Uses DynamoDBDocumentClient from @aws-sdk/lib-dynamodb which automatically
  * marshals/unmarshals DynamoDB's typed attribute format to/from plain JS objects.
  *
- * Provides four functions:
- *  - putItem(item)           → writes a new image metadata record
- *  - getItem(code)           → reads a record by short-code
- *  - incrementViews(code)    → atomically increments the view counter
- *  - getStats(code)          → alias for getItem, used by the stats route
+ * Provides:
+ *   putItem(item)        → writes a new image metadata record
+ *   getItem(code)        → reads a record by short-code
+ *   incrementViews(code) → atomically increments the view counter
+ *   getStats(code)       → alias for getItem, used by the stats route
  */
 
 'use strict';
 
-const { DynamoDBClient }                         = require('@aws-sdk/client-dynamodb');
+const { DynamoDBClient }                     = require('@aws-sdk/client-dynamodb');
 const { DynamoDBDocumentClient, PutCommand,
-        GetCommand, UpdateCommand }               = require('@aws-sdk/lib-dynamodb');
+        GetCommand, UpdateCommand }           = require('@aws-sdk/lib-dynamodb');
 
-/**
- * Build the DynamoDB client config.
- * On EC2 with an IAM role attached, no credentials are needed — the SDK
- * resolves them automatically from the instance metadata service (IMDS).
- * For local dev set AWS_ACCESS_KEY_ID + AWS_SECRET_ACCESS_KEY in .env.
- */
-const dbClientConfig = { region: process.env.AWS_REGION };
-
-if (process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY) {
-  const { fromEnv } = require('@aws-sdk/credential-providers');
-  dbClientConfig.credentials = fromEnv();
-}
-
-const dbClient = new DynamoDBClient(dbClientConfig);
-
-// DynamoDBDocumentClient wraps the base client and handles attribute marshalling
+// DynamoDB client — credentials resolved automatically from IAM Role on EC2.
+const dbClient  = new DynamoDBClient({ region: process.env.AWS_REGION });
 const docClient = DynamoDBDocumentClient.from(dbClient);
 
-// Support both DYNAMODB_TABLE (preferred) and legacy DYNAMO_TABLE_NAME
-const TABLE = process.env.DYNAMODB_TABLE || process.env.DYNAMO_TABLE_NAME;
+// Table name from environment — DYNAMODB_TABLE is the primary name
+const TABLE = process.env.DYNAMODB_TABLE;
 
 /**
  * putItem(item)
  *
- * Writes a new image record to DynamoDB.
+ * Writes a new image record to DynamoDB with views initialised to 0.
  *
  * @param {Object} item
  * @param {string} item.code         - Short-code PK
@@ -54,6 +45,10 @@ const TABLE = process.env.DYNAMODB_TABLE || process.env.DYNAMO_TABLE_NAME;
  * @returns {Promise<void>}
  */
 async function putItem(item) {
+  if (!TABLE) {
+    throw new Error('DYNAMODB_TABLE is not set in environment variables.');
+  }
+
   const command = new PutCommand({
     TableName: TABLE,
     Item: {
@@ -73,6 +68,10 @@ async function putItem(item) {
  * @returns {Promise<Object|null>} The item, or null if not found
  */
 async function getItem(code) {
+  if (!TABLE) {
+    throw new Error('DYNAMODB_TABLE is not set in environment variables.');
+  }
+
   const command = new GetCommand({
     TableName: TABLE,
     Key: { code },
@@ -91,6 +90,8 @@ async function getItem(code) {
  * @returns {Promise<void>}
  */
 async function incrementViews(code) {
+  if (!TABLE) return; // non-critical — don't crash the redirect
+
   const command = new UpdateCommand({
     TableName:        TABLE,
     Key:              { code },
@@ -102,7 +103,7 @@ async function incrementViews(code) {
 }
 
 /**
- * getStats(code) — convenience alias for getItem, used by the stats route
+ * getStats(code) — convenience alias for getItem, used by the stats route.
  *
  * @param {string} code
  * @returns {Promise<Object|null>}
