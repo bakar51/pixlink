@@ -20,7 +20,7 @@
 
 const { DynamoDBClient }                     = require('@aws-sdk/client-dynamodb');
 const { DynamoDBDocumentClient, PutCommand,
-        GetCommand, UpdateCommand }           = require('@aws-sdk/lib-dynamodb');
+        GetCommand, UpdateCommand, DeleteCommand } = require('@aws-sdk/lib-dynamodb');
 
 // DynamoDB client — credentials resolved automatically from IAM Role on EC2.
 const dbClient  = new DynamoDBClient({ region: process.env.AWS_REGION });
@@ -113,4 +113,21 @@ async function getStats(code) {
   return getItem(code);
 }
 
-module.exports = { putItem, getItem, incrementViews, getStats };
+/**
+ * deleteItem(code)
+ *
+ * Deletes an image record from DynamoDB.
+ *
+ * @param {string} code
+ * @returns {Promise<void>}
+ */
+async function deleteItem(code) {
+  if (!TABLE) return;
+  const command = new DeleteCommand({
+    TableName: TABLE,
+    Key: { shortCode: code },
+  });
+  await docClient.send(command);
+}
+
+module.exports = { putItem, getItem, incrementViews, getStats, deleteItem };

@@ -36,6 +36,27 @@ export default function Gallery() {
     }
   };
 
+  const handleDelete = async (code, e) => {
+    e.preventDefault(); // Prevent navigating to the image
+    if (!window.confirm('Are you sure you want to delete this image?')) return;
+
+    try {
+      const token = await user.getIdToken();
+      const res = await fetch(apiUrl(`/user/uploads/${code}`), {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      if (!res.ok) {
+        throw new Error('Failed to delete image');
+      }
+      setUploads(prev => prev.filter(item => item.code !== code));
+    } catch (err) {
+      alert(err.message);
+    }
+  };
+
   if (loading) {
     return <div className="text-center p-8 text-muted">Loading your gallery...</div>;
   }
@@ -76,8 +97,28 @@ export default function Gallery() {
               color: 'inherit',
               border: '1px solid var(--color-border)',
               transition: 'transform 0.2s',
+              position: 'relative'
             }}
           >
+            <button 
+              onClick={(e) => handleDelete(item.code, e)}
+              style={{
+                position: 'absolute',
+                top: '8px',
+                right: '8px',
+                background: 'rgba(0,0,0,0.6)',
+                color: 'white',
+                border: 'none',
+                borderRadius: '4px',
+                padding: '4px 8px',
+                cursor: 'pointer',
+                fontSize: '0.8rem',
+                zIndex: 10
+              }}
+              title="Delete Image"
+            >
+              ✕
+            </button>
             <div style={{ aspectRatio: '1', width: '100%', background: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <img 
                 src={item.thumbUrl || item.viewUrl} 

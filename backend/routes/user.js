@@ -4,7 +4,8 @@ const { Router } = require('express');
 const { requireAuth } = require('../middleware/auth');
 const { DynamoDBDocumentClient, QueryCommand } = require('@aws-sdk/lib-dynamodb');
 const { DynamoDBClient } = require('@aws-sdk/client-dynamodb');
-const { getPublicUrl } = require('../services/s3');
+const { getPublicUrl, deleteFromS3 } = require('../services/s3');
+const { getItem, deleteItem } = require('../services/dynamo');
 
 const router = Router();
 
@@ -43,6 +44,35 @@ router.get('/uploads', requireAuth, async (req, res, next) => {
     items.sort((a, b) => new Date(b.uploadedAt) - new Date(a.uploadedAt));
 
     res.status(200).json(items);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// DELETE /api/user/uploads/:code
+router.delete('/uploads/:code', requireAuth, async (req, res, next) => {
+  try {
+    const code = req.params.code;
+    const item = await getItem(code);
+
+    if (!item) {
+      return res.status(404).json({ error: 'Image not found' });
+    }
+
+    if (item.userId !== req.userId) {
+      return res.status(403).json({ error: 'Forbidden' });
+    }
+
+    // Delete from S3
+    await deleteFromS3(item.s3Key);
+    if (item.thumbS3Key) {
+      await deleteFromS3(item.thumbS3Key);
+    }
+
+    // Delete from DynamoDB
+    await deleteItem(code);
+
+    res.status(200).json({ success: true });
   } catch (err) {
     next(err);
   }

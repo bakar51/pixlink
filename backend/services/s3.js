@@ -16,7 +16,7 @@
 
 'use strict';
 
-const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3');
+const { S3Client, PutObjectCommand, DeleteObjectCommand } = require('@aws-sdk/client-s3');
 
 // S3 client — credentials resolved automatically from IAM Role (on EC2)
 // or the default credential chain (local dev with ~/.aws/credentials).
@@ -74,4 +74,21 @@ function getPublicUrl(key) {
   return `https://${BUCKET}.s3.${process.env.AWS_REGION}.amazonaws.com/${key}`;
 }
 
-module.exports = { uploadToS3, getPublicUrl };
+/**
+ * deleteFromS3(key)
+ *
+ * Deletes an object from S3.
+ *
+ * @param {string} key - S3 object key
+ * @returns {Promise<void>}
+ */
+async function deleteFromS3(key) {
+  if (!BUCKET || !key) return;
+  const command = new DeleteObjectCommand({
+    Bucket: BUCKET,
+    Key: key
+  });
+  await s3.send(command);
+}
+
+module.exports = { uploadToS3, getPublicUrl, deleteFromS3 };
