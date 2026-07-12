@@ -32,7 +32,7 @@ import { addRecent, getRecent, clearRecent } from './utils/storage';
 
 export default function App() {
   // ── ALL hooks FIRST — no early returns before this block ───────────────────
-  const { user, loading, signOut } = useAuth();
+  const { user, loading, signOut, signInWithGoogle } = useAuth();
 
   const [file,       setFile]       = useState(null);
   const [compResult, setCompResult] = useState(null);
