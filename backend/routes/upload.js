@@ -103,10 +103,9 @@ router.post(
       const uploadedAt = new Date().toISOString();
       const expiresAt  = computeExpiresAt(expiry);
 
-      // Write metadata record to DynamoDB
-      await putItem({
+      // Build metadata record
+      const itemToSave = {
         code,
-        userId: req.userId || null,
         s3Key,
         thumbS3Key,
         originalName,
@@ -114,7 +113,15 @@ router.post(
         size:       file.size,
         uploadedAt,
         expiresAt,
-      });
+      };
+
+      // Only add userId if logged in to prevent DynamoDB GSI Type Mismatch
+      if (req.userId) {
+        itemToSave.userId = req.userId;
+      }
+
+      // Write metadata record to DynamoDB
+      await putItem(itemToSave);
 
       // Build the response URLs
       // shortUrl is the redirect URL the user will share

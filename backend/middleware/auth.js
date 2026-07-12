@@ -10,7 +10,10 @@ try {
       credential: admin.credential.cert(serviceAccount)
     });
   } else {
-    admin.initializeApp();
+    // Specify projectId so token verification works on EC2 without credentials
+    admin.initializeApp({
+      projectId: process.env.FIREBASE_PROJECT_ID || 'pixlink-93a32'
+    });
   }
   authEnabled = true;
   console.log('[Auth] Firebase Admin initialized.');
