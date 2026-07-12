@@ -157,6 +157,16 @@ export default function ResultCard({ result, onReset }) {
             >
               Open image
             </a>
+            <a
+              href={result.viewUrl}
+              download={result.originalName || 'image'}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn btn--ghost btn--sm"
+              id="save-image-link"
+            >
+              Save image
+            </a>
           </div>
         </div>
 
